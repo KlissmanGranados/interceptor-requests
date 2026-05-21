@@ -4,23 +4,33 @@ const fs = require('fs');
 
 app.use(express.json());
 
-const logFilePath = './data/logData.json';
+const dataFolder = './data';
+const logFilePath = `${dataFolder}/logData.json`;
+let data;
 
-const readLogFile = () => {
-    if (fs.existsSync(logFilePath)) {
-        const data = fs.readFileSync(logFilePath);
-        return JSON.parse(data);
+if (!fs.existsSync(dataFolder)) {
+    fs.mkdirSync(dataFolder);
+}
+
+if (fs.existsSync(logFilePath)) {
+    
+    try {
+        const json = JSON.parse(fs.readFileSync(logFilePath));
+        data = Array.isArray(json) ? json : [];
+    } catch (error) {
+        console.error('Error parsing log data:', error);
+        data = [];
     }
-    return [];
-};
+
+} else {
+    data = [];
+}
 
 const writeLogFile = (logData) => {
-    fs.writeFileSync(logFilePath, JSON.stringify(logData));
+    fs.writeFileSync(logFilePath, JSON.stringify(logData, null, 2));
 };
 
 app.use((req, res, next) => {
-
-    let logData = readLogFile();
 
     const requestData = {
         body: req.body,
@@ -29,14 +39,14 @@ app.use((req, res, next) => {
         method: req.method,
         timestamp: new Date()
     };
-    
-    if(requestData.uri == '/logger' && requestData.method == 'GET') {
-        res.status(200).json(readLogFile());
-    } else {
-        logData.push(requestData);
-        writeLogFile(logData);
-        res.status(200).send('OK');
+
+    if (requestData.uri == '/logger' && requestData.method == 'GET') {
+        return res.status(200).json(data);
     }
+
+    data.push(requestData);
+    writeLogFile(data);
+    res.status(200).send('OK');
 
 });
 
