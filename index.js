@@ -4,6 +4,8 @@ const fs = require('fs');
 
 app.use(express.json());
 
+const excludePaths = new Set(['/favicon.ico', '/logger', '/service_worker.js', '/manifest.json', '/sw.js', '/robots.txt']);
+
 const dataFolder = './data';
 const logFilePath = `${dataFolder}/logData.json`;
 let data;
@@ -44,7 +46,11 @@ app.use((req, res, next) => {
         return res.status(200).json(data);
     }
 
-    data.push(requestData);
+    if(excludePaths.has(requestData.uri)) {
+        return res.status(204).send('No Content');
+    }
+
+    data.unshift(requestData);
     writeLogFile(data);
     res.status(200).send('OK');
 
